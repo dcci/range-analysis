@@ -51,7 +51,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/TimeValue.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/FileSystem.h"
 #include <deque>
@@ -563,120 +562,6 @@ public:
   }
   /// Clear memory allocated
   void clear();
-};
-
-/// This class can be used to gather statistics on running time
-/// and memory footprint. It had been developed before LLVM started
-/// to provide a class for this exact purpose. We'll keep using this
-/// because it works just fine and is well put together.
-class Profile {
-public:
-  class TimeValue : public sys::TimeValue {
-  public:
-    // Default constructor
-    TimeValue() : sys::TimeValue(0.0) {}
-
-    // Copy constructor related to parent class
-    TimeValue(const sys::TimeValue &from) : sys::TimeValue(0.0) {
-      seconds(from.seconds());
-      nanoseconds(from.nanoseconds());
-    }
-
-    // Copy constructor
-    TimeValue(const TimeValue &from) : sys::TimeValue(0.0) {
-      seconds(from.seconds());
-      nanoseconds(from.nanoseconds());
-    }
-
-    // Assignment operator
-    TimeValue &operator=(const TimeValue &from) {
-      if (*this == from) {
-        return *this;
-      }
-
-      seconds(from.seconds());
-      nanoseconds(from.nanoseconds());
-
-      return *this;
-    }
-
-    // Add operator
-    TimeValue operator+(const TimeValue &op) {
-      return static_cast<TimeValue>(static_cast<sys::TimeValue>(*this) +
-                                    static_cast<sys::TimeValue>(op));
-    }
-
-    TimeValue &operator+=(const TimeValue &op) {
-      TimeValue result = *this + op;
-      *this = result;
-      return *this;
-    }
-
-    // Sub operator
-    TimeValue operator-(const TimeValue &op) {
-      return static_cast<TimeValue>(static_cast<sys::TimeValue>(*this) -
-                                    static_cast<sys::TimeValue>(op));
-    }
-
-    TimeValue &operator-=(const TimeValue &op) {
-      TimeValue result = *this - op;
-      *this = result;
-      return *this;
-    }
-  };
-
-  // Map to store accumulated times
-  typedef StringMap<TimeValue> AccTimesMap;
-
-private:
-  AccTimesMap accumulatedtimes;
-  size_t memory;
-
-public:
-  Profile() : memory(0) {}
-
-  TimeValue timenow() {
-    TimeValue garbage, usertime;
-    sys::Process::GetTimeUsage(garbage, usertime, garbage);
-
-    return usertime;
-  }
-
-  void updateTime(StringRef key, const TimeValue &time) {
-    accumulatedtimes[key] += time;
-  }
-
-  double getTimeDouble(StringRef key) {
-    return accumulatedtimes[key].seconds() +
-           (0.001) * accumulatedtimes[key].milliseconds();
-  }
-
-  TimeValue getTime(StringRef key) { return accumulatedtimes[key]; }
-
-  void printTime(StringRef key) {
-    double time = getTimeDouble(key);
-    std::ostringstream formatted;
-    formatted << time;
-    errs() << formatted.str() << "\t - " << key << " elapsed time\n";
-  }
-
-  void setMemoryUsage() {
-    size_t newmemory = sys::Process::GetMallocUsage();
-    if (newmemory > memory) {
-      memory = newmemory;
-    }
-  }
-
-  size_t getMemoryUsage() { return memory; }
-
-  void printMemoryUsage() {
-    std::ostringstream formatted;
-    // Convert bytes to kilobytes
-    double mem = memory;
-    formatted << (mem / 1024);
-    errs() << formatted.str() << "\t - "
-           << "Memory used in KB\n";
-  }
 };
 
 // The VarNodes type.

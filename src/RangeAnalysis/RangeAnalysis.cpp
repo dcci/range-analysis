@@ -64,11 +64,6 @@ const std::string sigmaString = "vSSA_sigma";
 std::string pestring;
 raw_string_ostream pseudoEdgesString(pestring);
 
-#ifdef STATS
-// Used to profile
-Profile prof;
-#endif
-
 // Print name of variable according to its type
 static void printVarName(const Value *V, raw_ostream &OS) {
   const Argument *A = NULL;
@@ -173,17 +168,8 @@ template <class CGT> bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
   updateMinMax(MAX_BIT_INT);
 
 // Build the graph and find the intervals of the variables.
-#ifdef STATS
-  Profile::TimeValue before = prof.timenow();
-#endif
   CG->buildGraph(F);
   CG->buildVarNodes();
-#ifdef STATS
-  Profile::TimeValue elapsed = prof.timenow() - before;
-  prof.updateTime("BuildGraph", elapsed);
-
-  prof.setMemoryUsage();
-#endif
 #ifdef PRINT_DEBUG
   CG->printToFile(F, "/tmp/" + F.getName() + "cgpre.dot");
   errs() << "Analyzing function " << F.getName() << ":\n";
@@ -202,30 +188,6 @@ void IntraProceduralRA<CGT>::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 template <class CGT> IntraProceduralRA<CGT>::~IntraProceduralRA() {
-#ifdef STATS
-  prof.printTime("BuildGraph");
-  prof.printTime("Nuutila");
-  prof.printTime("SCCs resolution");
-  prof.printTime("ComputeStats");
-  prof.printMemoryUsage();
-
-  std::ostringstream formated;
-  formated << 100 * (1.0 - ((double)(needBits) / usedBits));
-  errs() << formated.str() << "\t - "
-         << " Percentage of reduction\n";
-
-  // max visit computation
-  unsigned maxtimes = 0;
-  for (DenseMap<const Value *, unsigned>::iterator fmit = FerMap.begin(),
-                                                   fmend = FerMap.end();
-       fmit != fmend; ++fmit) {
-    unsigned times = fmit->second;
-    if (times > maxtimes) {
-      maxtimes = times;
-    }
-  }
-  maxVisit = maxtimes;
-#endif
   //	delete CG;
 }
 
@@ -264,9 +226,6 @@ template <class CGT> bool InterProceduralRA<CGT>::runOnModule(Module &M) {
   updateMinMax(MAX_BIT_INT);
 
 // Build the Constraint Graph by running on each function
-#ifdef STATS
-  Profile::TimeValue before = prof.timenow();
-#endif
   for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
     // If the function is only a declaration, or if it has variable number of
     // arguments, do not match
@@ -278,12 +237,6 @@ template <class CGT> bool InterProceduralRA<CGT>::runOnModule(Module &M) {
   }
   CG->buildVarNodes();
 
-#ifdef STATS
-  Profile::TimeValue elapsed = prof.timenow() - before;
-  prof.updateTime("BuildGraph", elapsed);
-
-  prof.setMemoryUsage();
-#endif
 #ifdef PRINT_DEBUG
   std::string moduleIdentifier = M.getModuleIdentifier();
   int pos = moduleIdentifier.rfind("/");
@@ -455,32 +408,7 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(
   }
 }
 
-template <class CGT> InterProceduralRA<CGT>::~InterProceduralRA() {
-#ifdef STATS
-  prof.printTime("BuildGraph");
-  prof.printTime("Nuutila");
-  prof.printTime("SCCs resolution");
-  prof.printTime("ComputeStats");
-  prof.printMemoryUsage();
-
-  std::ostringstream formated;
-  formated << 100 * (1.0 - ((double)(needBits) / usedBits));
-  errs() << formated.str() << "\t - "
-         << " Percentage of reduction\n";
-
-  // max visit computation
-  unsigned maxtimes = 0;
-  for (DenseMap<const Value *, unsigned>::iterator fmit = FerMap.begin(),
-                                                   fmend = FerMap.end();
-       fmit != fmend; ++fmit) {
-    unsigned times = fmit->second;
-    if (times > maxtimes) {
-      maxtimes = times;
-    }
-  }
-  maxVisit = maxtimes;
-#endif
-}
+template <class CGT> InterProceduralRA<CGT>::~InterProceduralRA() {}
 
 template <class CGT> char IntraProceduralRA<CGT>::ID = 0;
 static RegisterPass<IntraProceduralRA<Cousot>>
@@ -2898,29 +2826,16 @@ void ConstraintGraph::findIntervals() {
 //	clearValueMaps();
 
 // Builds symbMap
-#ifdef STATS
-  Profile::TimeValue before = prof.timenow();
-#endif
   buildSymbolicIntersectMap();
 
   // List of SCCs
   Nuutila sccList(&vars, &useMap, &symbMap);
-#ifdef STATS
-  Profile::TimeValue after = prof.timenow();
-  Profile::TimeValue elapsed = after - before;
-  prof.updateTime("Nuutila", elapsed);
-#endif
-  // STATS
   numSCCs += sccList.worklist.size();
 #ifdef SCC_DEBUG
   unsigned numberOfSCCs = numSCCs;
 #endif
 
 // For each SCC in graph, do the following
-#ifdef STATS
-  before = prof.timenow();
-#endif
-
   for (Nuutila::iterator nit = sccList.begin(), nend = sccList.end();
        nit != nend; ++nit) {
     SmallPtrSet<VarNode *, 32> &component = *sccList.components[*nit];
@@ -2993,20 +2908,12 @@ void ConstraintGraph::findIntervals() {
     propagateToNextSCC(component);
   }
 
-#ifdef STATS
-  elapsed = prof.timenow() - before;
-  prof.updateTime("SCCs resolution", elapsed);
-#endif
-
 #ifdef SCC_DEBUG
   ASSERT(numberOfSCCs == 0, "Not all SCCs have been visited")
 #endif
 
 #ifdef STATS
-  before = prof.timenow();
   computeStats();
-  elapsed = prof.timenow() - before;
-  prof.updateTime("ComputeStats", elapsed);
 #endif
 }
 
