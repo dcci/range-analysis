@@ -568,7 +568,7 @@ public:
 typedef DenseMap<const Value *, VarNode *> VarNodes;
 
 // The Operations type.
-typedef SmallPtrSet<BasicOp *, 64> GenOprs;
+typedef SmallPtrSet<BasicOp *, 32> GenOprs;
 
 // A map from variables to the operations where these variables are used.
 typedef DenseMap<const Value *, SmallPtrSet<BasicOp *, 8>> UseMap;
