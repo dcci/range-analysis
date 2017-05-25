@@ -442,7 +442,6 @@ class PhiOp : public BasicOp {
 private:
   // Vector of sources
   SmallVector<const VarNode *, 2> sources;
-  unsigned opcode;
   /// Computes the interval of the sink based on the interval of the sources,
   /// the operation and the interval associated to the operation.
   Range eval() const;
