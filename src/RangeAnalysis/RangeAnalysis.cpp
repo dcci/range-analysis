@@ -36,7 +36,6 @@ STATISTIC(numConstants, "Number of constants.");
 STATISTIC(numZeroUses, "Number of variables without any use.");
 STATISTIC(numNotInt, "Number of variables that are not Integer.");
 STATISTIC(numOps, "Number of operations");
-STATISTIC(maxVisit, "Max number of times a value has been visited.");
 
 // The number of bits needed to store the largest variable of the function
 // (APInt).
