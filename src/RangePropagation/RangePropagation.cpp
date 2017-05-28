@@ -12,8 +12,23 @@ struct RangePropagation : public FunctionPass {
   RangePropagation() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
-    llvm::errs() << "tinkywinky\n";
+    IntraProceduralRA<Cousot> &RA = getAnalysis<IntraProceduralRA<Cousot>>();
+    errs() << "Analysis for function: " << F.getName() << "\n";
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        const Value *V = &I;
+        Range R = RA.getRange(V);
+        if (!R.isUnknown()) {
+          R.print(errs());
+          errs() << I << "\n";
+        }
+      }
+    }
     return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<IntraProceduralRA<Cousot>>();
   }
 };
 }
